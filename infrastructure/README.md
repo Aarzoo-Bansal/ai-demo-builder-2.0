@@ -145,8 +145,8 @@ flowchart TD
     B -->|MISS| D[Full Analysis<br/>8-10 seconds]
     D --> E[Save to Cache]
     
-    style C fill:#90EE90
-    style D fill:#FFB6C1
+    style C fill:#90EE90,stroke:#333,stroke-width:2px
+    style D fill:#FFB6C1,stroke:#333,stroke-width:2px
 ```
 
 **Cache Key:** `repo_url + commit_sha`
@@ -239,8 +239,6 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 ---
 
-## 🙏 Acknowledgments
-
-- Built for CS 6620 - Cloud Computing
+## Acknowledgments
 - Powered by AWS Serverless
 - AI suggestions by Google Gemini
