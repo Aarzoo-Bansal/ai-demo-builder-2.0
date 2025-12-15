@@ -145,8 +145,8 @@ flowchart TD
     B -->|MISS| D[Full Analysis<br/>8-10 seconds]
     D --> E[Save to Cache]
     
-    style C fill:#90EE90,stroke:#333,stroke-width:2px
-    style D fill:#FFB6C1,stroke:#333,stroke-width:2px
+    style C fill:green,stroke:#333,stroke-width:2px
+    style D fill:blue,stroke:#333,stroke-width:2px
 ```
 
 **Cache Key:** `repo_url + commit_sha`
