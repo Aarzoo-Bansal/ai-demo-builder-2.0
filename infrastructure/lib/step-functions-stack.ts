@@ -50,8 +50,21 @@ export class StepFunctionsStack extends cdk.Stack {
         // Creating task to invole Session Lambda
         const sessionTask = new tasks.LambdaInvoke(this, 'SessionTask', {
             lambdaFunction: props.sessionLambda,
-            outputPath: '$.Payload'
+            outputPath: '$.Payload',
+            retryOnServiceExceptions: true
         })
+
+        sessionTask.addRetry({
+            errors: ['Lambda.ServiceException', 'Lambda.TooManyRequestsException'],
+            interval: cdk.Duration.seconds(2),
+            maxAttempts: 3,
+            backoffRate: 2
+        })
+
+        sessionTask.addCatch(new sfn.Fail(this, 'SessionFailed', {
+            cause: 'Session Lambda Failed',
+            error: 'SessionError'
+        }))
 
         // Defining the chain: call session lambda after analysis lambda
         const analysisDefinition = analysisTask.next(sessionTask)
@@ -65,12 +78,56 @@ export class StepFunctionsStack extends cdk.Stack {
 
 
         /****************************************************************************************************** 
-         * PipeLine 2: Analysis Pipeline (Analysis -> Session)
-         * Triggered by: API Gateway
-         * Input: github_url
-         * Input Format: { "github_url" : "https://github.com/user/repo"}
+         * PipeLine 2: Video Pipeline (Video -> Notification)
+         * Triggered by: S3 event, when all the videos are uploaded
+         * Input: session id
+         * Input Format: { "session_id" : "abc123"}
         *******************************************************************************************************/
-       
+        
+        // Creating video tasks to invoke video lambda in the step function
+        const videoTask = new tasks.LambdaInvoke(this, 'VideoTask', {
+            lambdaFunction: props.videoLambda,
+            outputPath: '$.Payload',
+            retryOnServiceExceptions: true
+        })
 
+        videoTask.addRetry({
+            errors: ['Lambda.ServiceException', 'Lambda.TooManyRequestsException'],
+            interval: cdk.Duration.seconds(2),
+            maxAttempts: 3,
+            backoffRate: 2
+        })
+
+        videoTask.addCatch(new sfn.Fail(this, 'VideoFailed', {
+            cause: 'Video Lambda Failed',
+            error: 'VideoError'
+        }))
+
+        // Creating notification task to invoke notification lambda in the step function
+        const notificationTask = new tasks.LambdaInvoke(this, 'NotificationTask', {
+            lambdaFunction: props.notificationLambda,
+            outputPath: '$.Payload',
+            retryOnServiceExceptions: true
+        })
+
+        notificationTask.addRetry({
+            errors: ['Lambda.ServiceException', 'Lambda.TooManyRequestsException'],
+            interval: cdk.Duration.seconds(2),
+            maxAttempts: 3, 
+            backoffRate: 2
+        })
+
+        notificationTask.addCatch(new sfn.Fail(this, 'NotificationFailed', {
+            cause: 'Notification Lambda Failed',
+            error: 'NotificationError'
+        }))
+
+        const videoDefinition = videoTask.next(notificationTask)
+
+        this.videoPipeline = new sfn.StateMachine(this, 'VideoPipeline', {
+            stateMachineName: Constants.VIDEO_PIPELINE,
+            definitionBody: sfn.DefinitionBody.fromChainable(videoDefinition),
+            timeout: cdk.Duration.minutes(20)
+        })
     }
 }
