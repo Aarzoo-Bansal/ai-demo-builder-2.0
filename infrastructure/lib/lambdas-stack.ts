@@ -5,6 +5,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda'
 import { Construct } from 'constructs'
 import { Constants } from './constants'
 import * as iam from 'aws-cdk-lib/aws-iam'
+import * as sam from 'aws-cdk-lib/aws-sam'
 
 interface LambdaStackProps extends cdk.StackProps {
     cacheTable: dynamodb.TableV2
@@ -66,11 +67,17 @@ export class LambdaStack extends cdk.Stack {
        /****************************************************************************************************** 
          * Lambda 3 - Video Processing Lambda
        *******************************************************************************************************/
+       const ffmpegApp = new sam.CfnApplication(this, 'FFmpegApplication', {
+            location: {
+                applicationId: 'arn:aws:serverlessrepo:us-east-1:145266761615:applications/ffmpeg-lambda-layer',
+                semanticVersion: '1.0.0'
+            }
+       })
+       
        // create an ffmpeg layer for video processing - using public layer first
        const ffmpegLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'FFmpegLayer',
-            'arn:aws:lambda:us-east-1:123456789:layer:ffmpeg:1'
+            ffmpegApp.getAtt('Outputs.LayerVersion').toString()
        )
-
 
        this.videoLambda = new lambda.Function(this, 'AiDemoVideoLambda', {
             functionName: Constants.VIDEO_LAMBDA,
@@ -110,12 +117,12 @@ export class LambdaStack extends cdk.Stack {
             }
       })
 
-      props.sessionTable.grantReadData(this.notificationLambda)
+      props.sessionTable.grantReadWriteData(this.notificationLambda)
       props.videoProcessingBucket.grantDelete(this.notificationLambda)
 
       // Granting permission to send email to the user via SES
       this.notificationLambda.addToRolePolicy(new iam.PolicyStatement({
-            actions: ['ses:SendEmail', 'sesSendRawEmail'],
+            actions: ['ses:SendEmail', 'ses:SendRawEmail'],
             resources: ['*']
       }))
     }
