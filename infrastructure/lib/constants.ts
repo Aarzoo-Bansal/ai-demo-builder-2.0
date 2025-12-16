@@ -11,5 +11,15 @@ export const Constants = {
      ******************************************************************************************/
     VIDEO_UPLOAD_BUCKET: `ai-demo-uploads-${process.env.CDK_DEFAULT_ACCOUNT}`,
     VIDEO_PROCESSING_BUCKET: `ai-demo-processing-${process.env.CDK_DEFAULT_ACCOUNT}`,
-    FINAL_VIDEO_BUCKET: `ai-demo-output-${process.env.CDK_DEFAULT_ACCOUNT}`
+    FINAL_VIDEO_BUCKET: `ai-demo-output-${process.env.CDK_DEFAULT_ACCOUNT}`,
+    
+    /******************************************************************************************
+     * Lambdas Name
+     ******************************************************************************************/
+    ANALYSIS_LAMBDA: 'ai-demo-analysis',
+    SESSION_LAMBDA: 'ai-demo-session',
+    VIDEO_LAMBDA: 'ai-demo-video',
+    NOTIFICATION_LAMBDA: 'ai-demo-notification'
+
+
 }
