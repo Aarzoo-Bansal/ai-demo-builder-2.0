@@ -19,7 +19,13 @@ export const Constants = {
     ANALYSIS_LAMBDA: 'ai-demo-analysis',
     SESSION_LAMBDA: 'ai-demo-session',
     VIDEO_LAMBDA: 'ai-demo-video',
-    NOTIFICATION_LAMBDA: 'ai-demo-notification'
+    NOTIFICATION_LAMBDA: 'ai-demo-notification',
+
+    /******************************************************************************************
+     * Statemachine Name
+     ******************************************************************************************/
+    ANALYSIS_PIPELINE: 'ai-demo-analysis-pipeline',
+    VIDEO_PIPELINE: 'ai-demo-video-pipeline'
 
 
 }
