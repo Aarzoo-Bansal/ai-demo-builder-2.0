@@ -84,7 +84,7 @@ export class LambdaStack extends cdk.Stack {
             runtime: lambda.Runtime.PYTHON_3_11,
             handler: 'handler.handler',
             code: lambda.Code.fromAsset('../services/video'),
-            memorySize: 3072,
+            memorySize: 3008,
             timeout: cdk.Duration.minutes(15),
             environment: {
                 SESSIONS_TABLE_NAME: props.sessionTable.tableName,
