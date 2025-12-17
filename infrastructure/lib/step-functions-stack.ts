@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib'
 import * as lambda from 'aws-cdk-lib/aws-lambda'
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions'
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks'
+import * as logs from 'aws-cdk-lib/aws-logs'
 import { Construct } from 'constructs'
 import { Constants } from './constants'
 
@@ -18,6 +19,14 @@ export class StepFunctionsStack extends cdk.Stack {
 
     constructor(scope: Construct, id: string, props: StepFunctionsStackProps) {
         super(scope, id, props)
+
+        /****************************************************************************************************** 
+         * Log Groups for Step Functions
+        *******************************************************************************************************/
+        const analysisLogGroup = new logs.LogGroup(this, 'AnalysisPipelineLogGroup', {
+            logGroupName: Constants.LOG_GROUP_NAME,
+            removalPolicy: cdk.RemovalPolicy.DESTROY
+        })
 
         /****************************************************************************************************** 
          * PipeLine 1: Analysis Pipeline (Analysis -> Session)
@@ -73,7 +82,12 @@ export class StepFunctionsStack extends cdk.Stack {
         this.analysisPipeline = new sfn.StateMachine(this, 'AiDemoAnalysisPipeline', {
             stateMachineName: Constants.ANALYSIS_PIPELINE,
             definitionBody: sfn.DefinitionBody.fromChainable(analysisDefinition),
-            timeout: cdk.Duration.minutes(5)
+            timeout: cdk.Duration.minutes(5),
+            stateMachineType: sfn.StateMachineType.EXPRESS,
+            logs: {
+                destination: analysisLogGroup,
+                level: sfn.LogLevel.ALL
+            }
         })
 
 
@@ -127,7 +141,8 @@ export class StepFunctionsStack extends cdk.Stack {
         this.videoPipeline = new sfn.StateMachine(this, 'VideoPipeline', {
             stateMachineName: Constants.VIDEO_PIPELINE,
             definitionBody: sfn.DefinitionBody.fromChainable(videoDefinition),
-            timeout: cdk.Duration.minutes(20)
+            timeout: cdk.Duration.minutes(20),
+            stateMachineType: sfn.StateMachineType.STANDARD
         })
     }
 }

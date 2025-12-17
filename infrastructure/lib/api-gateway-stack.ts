@@ -5,7 +5,7 @@ import * as sfn from 'aws-cdk-lib/aws-stepfunctions'
 import * as iam from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs'
 import { Constants } from './constants'
- 
+
 interface ApiGatewayStackProps extends cdk.StackProps {
     analysisPipeline: sfn.StateMachine
     videoPipeline: sfn.StateMachine
@@ -41,33 +41,43 @@ export class ApiGatewayStack extends cdk.Stack {
             assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com')
         })
 
-        props.analysisPipeline.grantStartExecution(apiGatewayRole)
-        props.videoPipeline.grantStartExecution(apiGatewayRole)
+        apiGatewayRole.addToPolicy(new iam.PolicyStatement({
+            actions: ['states:StartSyncExecution'],
+            resources: [
+                props.analysisPipeline.stateMachineArn
+            ]
+        }))
+
+        apiGatewayRole.addToPolicy(new iam.PolicyStatement({
+            actions: ['states:StartExecution'],
+            resources: [
+                props.videoPipeline.stateMachineArn
+            ]
+        }))
 
         const analyzeIntegration = new apigateway.AwsIntegration({
             service: 'states',
-            action: 'StartSyncExecution', // wait for the step function to complete before sending the response
+            action: 'StartSyncExecution',
+            integrationHttpMethod: 'POST',
             options: {
                 credentialsRole: apiGatewayRole,
                 integrationResponses: [
                     {
                         statusCode: '200',
                         responseTemplates: {
-                            'application/json': ` 
-                                #set($output = $util.parseJson($input.body).output)
-                                $output
-                            `
+                            'application/json': `#set($body = $util.parseJson($input.body))
+$body.output`
                         },
                         responseParameters: {
-                            'method.response.header.Access-Control-Allow-Origin': "'*"
+                            'method.response.header.Access-Control-Allow-Origin': "'*'"
                         }
                     }
                 ],
                 requestTemplates: {
                     'application/json': `{
-                        "stateMachineArn":"${props.analysisPipeline.stateMachineArn}",
-                        "input": "$util.escapeJavaScript($input.body)"
-                    }`
+                "stateMachineArn": "${props.analysisPipeline.stateMachineArn}",
+                "input": "$util.escapeJavaScript($input.body)"
+            }`
                 }
             }
         })
@@ -115,10 +125,10 @@ export class ApiGatewayStack extends cdk.Stack {
                     }
                 ],
                 requestTemplates: {
-                    'application/json' : `{
-                        "stateMachineArn" : ${props.videoPipeline.stateMachineArn}",
-                        "input": "{\\"session_id\\": \\"$input.params('session_id')\\"}"
-                    }`
+                    'application/json': `{
+        "stateMachineArn": "${props.videoPipeline.stateMachineArn}",
+        "input": "{\\"session_id\\": \\"$input.params('sessionId')\\"}"
+    }`
                 }
             }
         })
