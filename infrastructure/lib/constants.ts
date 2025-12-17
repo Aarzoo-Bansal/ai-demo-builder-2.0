@@ -22,10 +22,17 @@ export const Constants = {
     NOTIFICATION_LAMBDA: 'ai-demo-notification',
 
     /******************************************************************************************
-     * Statemachine Name
+     * State Machine Name
      ******************************************************************************************/
     ANALYSIS_PIPELINE: 'ai-demo-analysis-pipeline',
-    VIDEO_PIPELINE: 'ai-demo-video-pipeline'
+    VIDEO_PIPELINE: 'ai-demo-video-pipeline',
+
+    /******************************************************************************************
+     * Rest API Name
+     ******************************************************************************************/
+    REST_API_NAME: 'ai-demo-api',
+    REST_API_DESC: 'API for AI Demo Builder'
+
 
 
 }

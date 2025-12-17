@@ -3,7 +3,7 @@ import * as cdk from 'aws-cdk-lib/core';
 import { LambdaStack } from '../lib/lambdas-stack';
 import { StorageStack } from '../lib/storage-stack';
 import { StepFunctionsStack } from '../lib/step-functions-stack';
-
+import { ApiGatewayStack } from '../lib/api-gateway-stack';
 
 const app = new cdk.App();
 
@@ -22,5 +22,11 @@ const stepFunctions = new StepFunctionsStack(app, 'StepFunctionStack', {
   sessionLambda: lambdas.sessionLambda,
   videoLambda: lambdas.videoLambda,
   notificationLambda: lambdas.notificationLambda
+})
+
+const apiGateway = new ApiGatewayStack(app, 'ApiGatewayStack', {
+  analysisPipeline: stepFunctions.analysisPipeline,
+  videoPipeline: stepFunctions.videoPipeline,
+  sessionLambda: lambdas.sessionLambda
 })
 
