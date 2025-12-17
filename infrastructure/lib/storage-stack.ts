@@ -47,7 +47,7 @@ export class StorageStack extends cdk.Stack {
          * Creating S3 Buckets
         *******************************************************************************************************/
         this.videoUploadsBucket = new s3.Bucket(this, 'AIDemoUploads', {
-            bucketName: Constants.VIDEO_UPLOAD_BUCKET,
+            // bucketName: Constants.VIDEO_UPLOAD_BUCKET,
             cors: [
                 {
                     allowedHeaders : ["*"],
@@ -65,7 +65,7 @@ export class StorageStack extends cdk.Stack {
         })
 
         this.videoProcessingBucket = new s3.Bucket(this, 'AiDemoProcessing', {
-            bucketName: Constants.VIDEO_PROCESSING_BUCKET,
+            // bucketName: Constants.VIDEO_PROCESSING_BUCKET,
             lifecycleRules: [
                 {
                     expiration: cdk.Duration.days(1) // deleting the processed videos after 1 day
@@ -76,7 +76,7 @@ export class StorageStack extends cdk.Stack {
         })
 
         this.finalVideoBucket = new s3.Bucket(this, 'AiDemoOutput', {
-            bucketName: Constants.FINAL_VIDEO_BUCKET,
+            // bucketName: Constants.FINAL_VIDEO_BUCKET,
             cors: [
                 {
                     allowedMethods: [s3.HttpMethods.GET],
