@@ -6,6 +6,7 @@ import { Construct } from 'constructs'
 import { Constants } from './constants'
 import * as iam from 'aws-cdk-lib/aws-iam'
 import * as sam from 'aws-cdk-lib/aws-sam'
+import * as ssm from 'aws-cdk-lib/aws-ssm'
 
 interface LambdaStackProps extends cdk.StackProps {
     cacheTable: dynamodb.TableV2
@@ -27,6 +28,14 @@ export class LambdaStack extends cdk.Stack {
         /****************************************************************************************************** 
          * Lambda 1 - Analysis Lambda
         *******************************************************************************************************/
+        const geminiApiKey = ssm.StringParameter.fromStringParameterName(
+            this, 'GeminiApiKey', '/ai-demo/gemini-api-key'
+        )
+
+        const githubToken = ssm.StringParameter.fromStringParameterName(
+            this, 'GitHubToken', '/ai-demo/github-token'
+        )
+        
         this.analysisLambda = new lambda.Function(this, 'AiDemoAnalysisLambda', {
             functionName: Constants.ANALYSIS_LAMBDA,
             runtime: lambda.Runtime.PYTHON_3_11,
@@ -36,11 +45,15 @@ export class LambdaStack extends cdk.Stack {
             timeout: cdk.Duration.seconds(60),
             environment: {
                 CACHE_TABLE_NAME: props.cacheTable.tableName,
+                GEMINI_PARAM_NAME: '/ai-demo/gemini-api-key',
+                GITHUB_PARAM_NAME: '/ai-demo/github-token'
             }
         })
 
         // Granting read and write permission to Cache Table
         props.cacheTable.grantReadWriteData(this.analysisLambda)
+        geminiApiKey.grantRead(this.analysisLambda)
+        githubToken.grantRead(this.analysisLambda)
 
         /****************************************************************************************************** 
          * Lambda 2 - Sessions Lambda
