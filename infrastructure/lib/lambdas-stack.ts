@@ -6,7 +6,6 @@ import { Construct } from 'constructs'
 import { Constants } from './constants'
 import * as iam from 'aws-cdk-lib/aws-iam'
 import * as sam from 'aws-cdk-lib/aws-sam'
-import * as ssm from 'aws-cdk-lib/aws-ssm'
 
 interface LambdaStackProps extends cdk.StackProps {
     cacheTable: dynamodb.TableV2
@@ -28,14 +27,6 @@ export class LambdaStack extends cdk.Stack {
         /****************************************************************************************************** 
          * Lambda 1 - Analysis Lambda
         *******************************************************************************************************/
-        const geminiApiKey = ssm.StringParameter.fromStringParameterName(
-            this, 'GeminiApiKey', '/ai-demo/gemini-api-key'
-        )
-
-        const githubToken = ssm.StringParameter.fromStringParameterName(
-            this, 'GitHubToken', '/ai-demo/github-token'
-        )
-        
         this.analysisLambda = new lambda.Function(this, 'AiDemoAnalysisLambda', {
             functionName: Constants.ANALYSIS_LAMBDA,
             runtime: lambda.Runtime.PYTHON_3_11,
@@ -52,8 +43,21 @@ export class LambdaStack extends cdk.Stack {
 
         // Granting read and write permission to Cache Table
         props.cacheTable.grantReadWriteData(this.analysisLambda)
-        geminiApiKey.grantRead(this.analysisLambda)
-        githubToken.grantRead(this.analysisLambda)
+        
+        // Grant permission to read SSM Parameters
+        this.analysisLambda.addToRolePolicy(new iam.PolicyStatement({
+            actions: ['ssm:GetParameter'],
+            resources: [
+                `arn:aws:ssm:${this.region}:${this.account}:parameter/ai-demo/gemini-api-key`,
+                `arn:aws:ssm:${this.region}:${this.account}:parameter/ai-demo/github-token`,
+            ]
+        }))
+
+        // Grant permission to decrypt 
+        this.analysisLambda.addToRolePolicy(new iam.PolicyStatement({
+            actions: ['kms:Decrypt'],
+            resources: ['*']
+        }))
 
         /****************************************************************************************************** 
          * Lambda 2 - Sessions Lambda
