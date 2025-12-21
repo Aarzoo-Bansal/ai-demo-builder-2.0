@@ -1,2 +1,2 @@
 google-generativeai
-requests
+requests==2.32.5

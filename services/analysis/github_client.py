@@ -301,10 +301,22 @@ def get_file_content(owner: str, repo: str, path: str, max_size: int = 100000) -
         content = response.text
         logger.debug(f"Fetched {len(content)} bytes for {path}")
 
+
+        if len(content) > max_size:
+            logger.info(f"Skipping the file: {path} because File is too large")
+            return create_response(200, data={
+                "path": path, 
+                "content": None,
+                "size": len(content),
+                "skipped": True,
+                "reason": "FILE_TOO_LARGE"
+            })
+
         return create_response(200, data= {
             "path": path,
             "content": content,
-            "size": len(content)
+            "size": len(content),
+            "skipped": False
         })
     
     except requests.exceptions.Timeout:
