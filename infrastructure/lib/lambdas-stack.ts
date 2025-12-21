@@ -27,6 +27,7 @@ export class LambdaStack extends cdk.Stack {
         /****************************************************************************************************** 
          * Lambda 1 - Analysis Lambda
         *******************************************************************************************************/
+        
         this.analysisLambda = new lambda.Function(this, 'AiDemoAnalysisLambda', {
             functionName: Constants.ANALYSIS_LAMBDA,
             runtime: lambda.Runtime.PYTHON_3_11,
@@ -37,7 +38,8 @@ export class LambdaStack extends cdk.Stack {
             environment: {
                 CACHE_TABLE_NAME: props.cacheTable.tableName,
                 GEMINI_PARAM_NAME: '/ai-demo/gemini-api-key',
-                GITHUB_PARAM_NAME: '/ai-demo/github-token'
+                GITHUB_PARAM_NAME: '/ai-demo/github-token',
+                LOG_LEVEL: "INFO"
             }
         })
 
