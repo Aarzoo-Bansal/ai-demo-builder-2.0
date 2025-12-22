@@ -16,7 +16,7 @@ ERROR_CODE = {
     500: "INTERNAL_SERVER_ERROR"
 }
 
-github_token = None
+_github_token = None
 
 def is_running_on_aws() -> bool:
     """
@@ -37,16 +37,16 @@ def get_credentials() -> str:
         str: github_token if present, else None
     """
     # Check if the github token is fetched already
-    global github_token
-    if github_token is not None:
-        return github_token
+    global _github_token
+    if _github_token is not None:
+        return _github_token
     # Determine if we are running the function locally or on AWS Lambda
     is_aws = is_running_on_aws()
     
     if is_aws:
         # Go to SSM to get the credentials
         logger.info("Running on AWS instance. Fetching tokens from AWS")
-        github_param_name = os.environ["GITHUB_PARAM_NAME"]
+        github_param_name = os.environ.get("GITHUB_PARAM_NAME")
 
         if not github_param_name:
             logger.error("GITHUB_PARAM_NAME environment variable not set")
@@ -62,7 +62,7 @@ def get_credentials() -> str:
                 WithDecryption=True
             )
 
-            github_token = response['Parameter']['Value']
+            _github_token = response['Parameter']['Value']
         
         except ClientError as e:
             logger.error(f"Error fetching parameter {github_param_name}: {e}")
@@ -73,14 +73,14 @@ def get_credentials() -> str:
         try:
             from dotenv import load_dotenv
             load_dotenv()
-            github_token = os.environ["GITHUB_TOKEN"]
-            if not github_token:
+            _github_token = os.environ.get("GITHUB_TOKEN")
+            if not _github_token:
                 logger.warning("GITHUB_TOKEN not found in environment")
         except ImportError:
             logger.warning(f"python-dotenv not found. Ensure it's installed for Local Environment")
             return None
     
-    return github_token
+    return _github_token
 
 def create_response(status_code: int, data: dict = None, error_code: str = None) -> dict:
     """
@@ -117,10 +117,10 @@ def get_headers() -> dict:
         "X-GitHub-Api-Version": "2022-11-28"
     }
 
-    github_token = get_credentials()
+    _github_token = get_credentials()
 
-    if github_token:
-        headers["Authorization"] = f"Bearer {github_token}"
+    if _github_token:
+        headers["Authorization"] = f"Bearer {_github_token}"
 
     return headers
 
