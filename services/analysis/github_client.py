@@ -18,7 +18,7 @@ ERROR_CODE = {
 
 _github_token = None
 
-def is_running_on_aws() -> bool:
+def _is_running_on_aws() -> bool:
     """
     Function to determine if the current code is running on AWS as Lambda or local machine
 
@@ -29,7 +29,7 @@ def is_running_on_aws() -> bool:
     return "AWS_LAMBDA_RUNTIME_API" in os.environ
 
 
-def get_credentials() -> str:
+def _get_credentials() -> str:
     """
     Returns the GitHub Credential
 
@@ -41,7 +41,7 @@ def get_credentials() -> str:
     if _github_token is not None:
         return _github_token
     # Determine if we are running the function locally or on AWS Lambda
-    is_aws = is_running_on_aws()
+    is_aws = _is_running_on_aws()
     
     if is_aws:
         # Go to SSM to get the credentials
@@ -54,8 +54,7 @@ def get_credentials() -> str:
         
         # Get credentials from AWS SSM
         ssm_client = boto3.client('ssm')
-        logger.info("Successfully retrieved GitHub token from AWS")
-
+        
         try:
             response = ssm_client.get_parameter(
                 Name=github_param_name,
@@ -63,6 +62,7 @@ def get_credentials() -> str:
             )
 
             _github_token = response['Parameter']['Value']
+            logger.info("Successfully retrieved GitHub token from AWS")
         
         except ClientError as e:
             logger.error(f"Error fetching parameter {github_param_name}: {e}")
@@ -107,7 +107,7 @@ def create_response(status_code: int, data: dict = None, error_code: str = None)
     }
 
 
-def get_headers() -> dict:
+def _get_headers() -> dict:
     """
     Returnes headers for GitHub API
     """
@@ -117,10 +117,10 @@ def get_headers() -> dict:
         "X-GitHub-Api-Version": "2022-11-28"
     }
 
-    _github_token = get_credentials()
+    token = _get_credentials()
 
-    if _github_token:
-        headers["Authorization"] = f"Bearer {_github_token}"
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
 
     return headers
 
@@ -141,7 +141,7 @@ def get_repo_metadata(owner: str, repo: str) -> dict:
     GITHUB_API = f"https://api.github.com/repos/{owner}/{repo}"
 
     # Getting the headers for the API call
-    headers = get_headers()
+    headers = _get_headers()
     
     try:
         response = requests.get(GITHUB_API, headers=headers, timeout=10)
@@ -191,7 +191,7 @@ def get_latest_commit_sha(owner: str, repo: str, default_branch: str) -> str:
     
     try:
         # Getting the headers for the api call
-        headers = get_headers()
+        headers = _get_headers()
 
         # Making the API call
         response = requests.get(LATEST_COMMIT_API, headers=headers, timeout=10)
@@ -211,7 +211,7 @@ def get_latest_commit_sha(owner: str, repo: str, default_branch: str) -> str:
     except requests.exceptions.ConnectionError:
         return create_response(503, error_code="CONNECTION_ERROR")
     except requests.exceptions.RequestException as e:
-        print(f"Failed 'Get Lastest SHA' request. Error: {e}")
+        logger.error(f"Failed 'Get Lastest SHA' request. Error: {e}")
         return create_response(500)
     
 
@@ -231,7 +231,7 @@ def get_file_tree(owner: str, repo: str, branch: str):
     GITHUB_TREE_API = f"https://api.github.com/repos/{owner}/{repo}/git/trees/{branch}?recursive=1"
     
     # Getting the headers for the API call
-    headers = get_headers()
+    headers = _get_headers()
 
     try:
         # Making the API call
@@ -287,7 +287,7 @@ def get_file_content(owner: str, repo: str, path: str, max_size: int = 100000) -
 
     CONTENT_API = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
     
-    headers = get_headers()
+    headers = _get_headers()
     # Request raw content directly
     headers["Accept"] = "application/vnd.github.raw"
 
@@ -322,7 +322,7 @@ def get_file_content(owner: str, repo: str, path: str, max_size: int = 100000) -
     except requests.exceptions.Timeout:
         logger.error(f"Timeout fetching content for {path}")
         return create_response(503, error_code="REQUEST_TIMEOUT")
-    except requests.exceptions.ConnectTimeout:
+    except requests.exceptions.ConnectionError:
         logger.error(f"Connection error fetching {path}")
         return create_response(503, error_code="CONNECTION_ERROR")
     except requests.exceptions.RequestException as e:
