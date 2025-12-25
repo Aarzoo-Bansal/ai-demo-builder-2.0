@@ -296,9 +296,3 @@ Return only a JSON array of {max_files} file paths, nothing else:
     except Exception as e:
         logger.error(f"AI file selection failed: {e}")
         return []
-    
-
-
-
-
-    
