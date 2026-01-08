@@ -225,12 +225,12 @@ def generate_suggestions(metadata: dict, file_tree: list, file_contents: dict) -
         }
 
 
-def select_important_files(file_tree: list, max_files: int = 10) -> list:
+def select_important_files(files: list, max_files: int = 10) -> list:
     """
     Use Gemini to select important files from the tree
 
     Args:
-        file_trees: list: list of file paths
+        file_trees: list: list of {"path": "...", "size": ...} dicts
         max_files: int: maximum files to select
 
     Returns:
@@ -239,6 +239,8 @@ def select_important_files(file_tree: list, max_files: int = 10) -> list:
     api_key = get_api_key()
     if not api_key:
         return []
+    
+    file_tree = [f.get("path", "") for f in files if f.get("path")]
     
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-1.5-flash')
