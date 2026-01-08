@@ -17,6 +17,18 @@ def is_running_on_aws() -> bool:
     """
     return "AWS_LAMBDA_RUNTIME_API" in os.environ
 
+def _clean_json_response(response_text: str) -> str:
+    """
+    Remove markdown code blocks from Gemini response
+    """
+    response_text = response_text.strip()
+    if response_text.startswith("```json"):
+        response_text = response_text[7:]
+    if response_text.startswith("```"):
+        response_text = response_text[3:]
+    if response_text.endswith("```"):
+        response_text = response_text[:-3]
+    return response_text.strip()
 
 def get_api_key() -> str:
     """
@@ -44,9 +56,8 @@ def get_api_key() -> str:
         ssm_client = boto3.client("ssm")
 
         try:
-            gemini_param_name = os.environ.get('GEMINI_PARAM_NAME')
             response = ssm_client.get_parameter(
-                Name=gemini_param_name,
+                Name=api_key_param_name,
                 WithDecryption=True
             )
 
@@ -82,7 +93,7 @@ def build_prompt(metadata: dict, file_tree: dict, file_contents: dict) -> str:
     """
     # Format file tree (show first 100 files to save token)
     tree_str = "\n".join(file_tree[:100])
-    if len(tree_str) > 100:
+    if len(file_tree) > 100:
         tree_str += f"\n... and {len(file_tree) - 100} more files"
 
     # Format file contents
@@ -177,27 +188,18 @@ def generate_suggestions(metadata: dict, file_tree: list, file_contents: dict) -
         }
     
     # Configure Gemini
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.0-flash')
-
+    client = genai.Client(api_key=api_key)
+    
     # Build Prompt
     prompt = build_prompt(metadata=metadata, file_tree=file_tree, file_contents=file_contents)
 
     try:
         # Generate response
-        response = model.generate_content(prompt)
-        response_text = response.text
-
-        # Clean up response
-        response_text = response_text.strip()
-        if response_text.startswith("```json"):
-            response_text = response_text[7:]
-        if response_text.startswith("```"):
-            response_text = response_text[3:]
-        if response_text.endswith("```"):
-            response_text = response_text[:-3]
-        
-        response_text = response_text.strip()
+        response = client.models.generate_content(
+        model = 'gemini-2.0-flash',
+        contents=prompt
+        )
+        response_text = _clean_json_response(response.text)
 
         suggestions = json.loads(response_text)
 
@@ -242,9 +244,8 @@ def select_important_files(files: list, max_files: int = 10) -> list:
     
     file_tree = [f.get("path", "") for f in files if f.get("path")]
     
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
-
+    client = genai.Client(api_key=api_key)
+    
     tree_str = "\n".join(file_tree[:500])
     if len(file_tree) > 500:
         tree_str += f"\n... and {len(file_tree) - 500} more files"
@@ -274,18 +275,11 @@ Return only a JSON array of {max_files} file paths, nothing else:
 """
     
     try:
-        response = model.generate_content(prompt)
-        response_text = response.text.strip()
-
-        # Clean up markdown code blocks
-        if response_text.startswith("```json"):
-            response_text = response_text[7:]
-        if response_text.startswith("```"):
-            response_text = response_text[3:]
-        if response_text.endswith("```"):
-            response_text = response_text[:-3]
-        response_text = response_text.strip()
-
+        response = client.models.generate_content(
+        model = 'gemini-1.5-flash',
+        contents=prompt
+        )
+        response_text = _clean_json_response(response.text)
         files = json.loads(response_text)
 
         valid_files = [file for file in files if file in file_tree]

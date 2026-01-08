@@ -35,14 +35,20 @@ def parse_github_url(github_url: str) -> tuple:
         tuple of the repo name and owner (owner, repo)
     """
     # Removing the last '/' if present
-    url = url.rstrip('/')
-    parts = url.split('/')
+    github_url = github_url.rstrip('/')
+    parts = github_url.split('/')
+
+    if len(parts) < 2:
+        return (None, None)
 
     owner = parts[-2]
     repo = parts[-1]
 
     if repo.endswith('.git'):
         repo = repo[:-4] # skip the last four letters (.git)
+
+    if not owner or not repo or owner in ('github.com', 'www.github.com', ''):
+        return (None, None)
 
     return (owner, repo)
 
@@ -121,7 +127,7 @@ def handler(event, context):
     Input: { "github_url": "https://github.com/owner/repo" }
     Output: { "analysis": {...}, "suggestions": [...] }
     """
-    logger.loggin(f"Received event: {json.dumps(event)}")
+    logger.debug(f"Received event: {json.dumps(event)}")
 
     # ============================================
     # STEP 1: Parse Input
@@ -135,7 +141,6 @@ def handler(event, context):
         }
     
     owner, repo = parse_github_url(github_url=github_url)
-    cache_key = f"{owner.lower()}/{repo.lower()}"
 
     if not owner or not repo:
         return {
@@ -143,6 +148,7 @@ def handler(event, context):
             "body": {"error_code": "INVALID_GITHUB_URL"}
         }
     
+    cache_key = f"{owner.lower()}/{repo.lower()}"
     logger.info(f"Analysing: {owner}/{repo}")
 
     # ============================================
@@ -164,12 +170,12 @@ def handler(event, context):
     commit_response = get_latest_commit_sha(owner=owner, repo=repo, default_branch=default_branch)
 
     if commit_response["statusCode"] != 200:
-        logging.error(f"Could not get SHA for {owner}/{repo}. Skipping Cache")
+        logger.error(f"Could not get SHA for {owner}/{repo}. Skipping Cache")
         commit_sha = None
     
     else:
-        commit_sha = commit_response["body"]["data"]["sha"]
-        logging.info(f"Latest Commit SHA for {owner}/{repo} is {commit_sha}")
+        commit_sha = commit_response["body"]["data"]["latest_commit_sha"]
+        logger.info(f"Latest Commit SHA for {owner}/{repo} is {commit_sha}")
     
 
     # ============================================
@@ -226,8 +232,9 @@ def handler(event, context):
                 high_value_files = combined
                 selection_method = "hybrid"
             else:
-                logging.info("AI found no additional files, keeping rule-based results")
+                logger.info("AI found no additional files, keeping rule-based results")
                 
+    fallback_files = []
     # If both AI and rule based found no files 
     if len(high_value_files) == 0 and file_count > 0:
         fallback_extensions = {'.py', '.js', '.ts', '.java', '.go', '.rs', '.cpp', '.c'}
@@ -253,7 +260,7 @@ def handler(event, context):
     file_contents = {}
 
     for file_path in high_value_files:
-        content_response = get_file_content(owner=owner, repo=repo, file_path=file_path)
+        content_response = get_file_content(owner=owner, repo=repo, path=file_path)
 
         if content_response["statusCode"] == 200:
             data = content_response["body"]["data"]
@@ -311,7 +318,7 @@ def handler(event, context):
     # STEP 10: Save to Cache
     # ============================================
     if commit_sha:
-        save_to_cache(github_url, commit_sha, analysis, suggestions)
+        save_to_cache(cache_key, commit_sha, analysis, suggestions)
     
     # ============================================
     # STEP 11: Return Results

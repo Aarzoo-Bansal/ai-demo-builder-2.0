@@ -175,7 +175,7 @@ def get_repo_metadata(owner: str, repo: str) -> dict:
         return create_response(500)
     
 
-def get_latest_commit_sha(owner: str, repo: str, default_branch: str) -> str:
+def get_latest_commit_sha(owner: str, repo: str, default_branch: str) -> dict:
     """
     Calls the GitHub API to fetch the latest commit sha for the default branch
 
